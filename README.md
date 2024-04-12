@@ -62,6 +62,61 @@ At this point if you get an error msg reading `Forbidden`; you are still guest u
 ```kubectl get pods -n NAMESPACE --kubeconfig PATH_TO_DOWNLOADED_CONFIG_FILE```
 
 
+## Running your first test job application
+
+1. Create a file called `firstjob.yaml` in your workspace with following content:
+```
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: demo-app
+spec:
+  template:
+    spec:
+      containers:
+      - name: demo-app
+        image: gitlab-registry.nrp-nautilus.io/prp/jupyter-stack/prp:latest
+        command:
+        - "python"
+        args:
+        - "/opt/repo/REPONAME/PYTHON_FILE"
+        volumeMounts:
+        - name: git-repo
+          mountPath: /opt/repo
+        resources:
+          limits:
+            memory: 8Gi
+            cpu: "4"
+            nvidia.com/gpu: "1"
+          requests:
+            memory: 4Gi
+            cpu: "1"
+            nvidia.com/gpu: "1"    
+      initContainers:
+      - name: init-clone-repo
+        image: alpine/git
+        args:
+          - clone
+          - --single-branch
+          - https://github.com/USERNAME/REPONAME.git
+          - /opt/repo/nautilus
+        volumeMounts:
+          - name: git-repo
+            mountPath: /opt/repo
+      volumes:
+      - name: git-repo
+        emptyDir: {}
+      restartPolicy: Never
+  backoffLimit: 5
+```
+
+2. To apply this on cluster, run `kubectl apply -f /pathto/firstjob.yaml -n NAMESPACE --kubeconfig /path/to/config.yaml`
+
+- Sample Output on `kubectl get pods`
+
+![](./job.png)
+
+
 ## To be continued..
 
 Well now, you are good to run your wokloads as jobs/batch jobs on the kubernetes cluster. I will come back with detailed tutorial on deploying workloads soon.
